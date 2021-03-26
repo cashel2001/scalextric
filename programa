@@ -1,0 +1,207 @@
+//YWROBOT
+//Compatible with the Arduino IDE 1.0
+//Library version:1.1
+#include <Wire.h> 
+#include <LiquidCrystal_I2C.h>
+
+LiquidCrystal_I2C lcd(0x27,20,4);  // set the LCD address to 0x27 for a 16 chars and 2 line display
+
+int Nvueltas = 1; //Numero de vueltas
+const int boton1 = 4; //Pin de control (Boton A)
+const int boton2 = 5; //Pin de control 2 (Boton B)
+int var1 = 0;
+int var2 = 0;
+const byte  rojo1 =  6; //Pin led rojo 1
+const byte  rojo2 =  7; //Pin led rojo 2
+const byte  rojo3 =  8; //Pin led rojo 3
+const byte  verde =  9; //Pin led verde
+int  intervalo =  1000; //Intervalo de la secuencia
+const byte  paso1 = 12; //Pin de paso de vuelta carril_1
+const byte  paso2 = 13; //Pin de paso de vuelta carril_2
+int  vuelta1 = 0; //Contador de vueltas carril_1
+int  vuelta2 = 0; //Contador de vueltas carril_2
+unsigned long tiempoF1 = 0; // Tiempo de fin de vuelta carril_1
+unsigned long tiempoS1 = 0; //Tiempo de salida de vuelta carril_1
+unsigned long tiempoV1 = 0; //Tiempo de vuelta carril_1
+unsigned long tiempoR1 = 99999; //Vuelta rapida carril_1
+unsigned long tiempoF2 = 0; // Tiempo de fin de vuelta carril_2
+unsigned long tiempoS2 = 0; //Tiempo de salida de vuelta carril_2
+unsigned long tiempoV2 = 0; //Tiempo de vuelta carril_2
+unsigned long tiempoR2 = 99999; //Vuelta rapida carril_2
+int estado = 0;
+int lap1 = 0;
+int lap2 = 0;
+
+void setup()
+{
+  pinMode(rojo1, OUTPUT);
+  pinMode(rojo2, OUTPUT);
+  pinMode(rojo3, OUTPUT);
+  pinMode(verde, OUTPUT);
+  pinMode(paso1, INPUT);
+  pinMode(paso2, INPUT);
+  pinMode(boton1, INPUT);
+  pinMode(boton2, INPUT);
+  lcd.init();                      // initialize the lcd 
+  lcd.backlight();
+  lcd.noBlink();
+  
+}
+
+void semaforo()
+{
+  digitalWrite(rojo1, HIGH); //Encendido secuencial de los rojos
+  delay(intervalo);
+  digitalWrite(rojo2, HIGH);
+  delay(intervalo);
+  digitalWrite(rojo3, HIGH);
+  delay(intervalo);
+  digitalWrite(rojo1, LOW); //Apaga los leds rojos
+  digitalWrite(rojo2, LOW);
+  digitalWrite(rojo3, LOW);
+  digitalWrite(verde, HIGH); // Enciende el verde
+  delay(intervalo*2);
+  digitalWrite(verde, LOW);  //Apaga verde
+  tiempoS1 = millis();
+  tiempoS2 = millis();
+}
+void pasoDEvuelta()
+  {
+    lap1 = digitalRead(paso1);
+    if (lap1 == HIGH) 
+      {
+        vuelta1 = vuelta1 + 1; //Conteo de vuelta carril 1
+        tiempoF1 = millis(); //Calculo de tiempo de vuelta
+        tiempoV1 = tiempoF1 - tiempoS1;
+        tiempoS1 = tiempoF1; //Pone el tiempo de salida nuevo
+        if (tiempoR1 > tiempoV1) 
+          {
+            tiempoR1 = tiempoV1;
+          }
+        lap1 = 0;
+        delay(250);
+      }
+    lap2 = digitalRead(paso1);
+    if (lap2 == HIGH)
+       {
+          vuelta2 = vuelta2 + 1;
+          tiempoF2 = millis(); //Calculo de tiempo de vuelta
+          tiempoV2 = tiempoF2 - tiempoS2;
+          tiempoS2 = tiempoF2; //Pone el tiempo de salida nuevo
+          if (tiempoR2 > tiempoV2) 
+            {
+              tiempoR2 = tiempoV2;
+            }
+          lap2 = 0;
+          delay(250);
+       }
+    delay(250); //Espera para para no contar varias veces por paso
+}
+
+void pantalla()
+{ 
+  //Mostrar el numero de vuelta y tiempo
+ lcd.clear();
+ lcd.print("Vuelta 1:");
+ lcd.setCursor(0, 1);
+ lcd.print("Tiempo 1:");
+ lcd.setCursor(10, 0); //Situar el cursor
+ lcd.print(vuelta1);
+ lcd.setCursor(10, 1); //Situar el cursor
+ lcd.print("   ");
+ lcd.setCursor(10, 1); //Situar el cursor
+ //*******************
+ lcd.print(tiempoV1/60000);   // <<== minutos
+ lcd.print(":");
+ lcd.print((tiempoV1%60000)/1000);  // <<== segundos
+ lcd.print(",");
+ lcd.print((tiempoV1%1000)/10);  // <<== decimas + centesimas
+ //*******************
+ lcd.setCursor(0, 2);
+ lcd.print("Vuelta 2:");
+ lcd.setCursor(0, 3);
+ lcd.print("Tiempo 2:");
+ lcd.setCursor(10, 2); //Situar el cursor
+ lcd.print(vuelta2);
+ lcd.setCursor(10, 3); //Situar el cursor
+ lcd.print("   ");
+ lcd.setCursor(10, 3); //Situar el cursor
+ //*******************
+ lcd.print(tiempoV2/60000);   // <<== minutos
+ lcd.print(":");
+ lcd.print((tiempoV2%60000)/1000);  // <<== segundos
+ lcd.print(",");
+ lcd.print((tiempoV2%1000)/10);  // <<== decimas + centesimas
+}
+
+void fin() {
+  lcd.clear();
+  lcd.print("Vuelta rapida 1:");
+  lcd.setCursor(10, 1);
+  lcd.print("   ");
+  lcd.setCursor(10, 1);
+  lcd.print(tiempoR1/60000);   // <<== minutos
+  lcd.print(":");
+  lcd.print((tiempoR1%60000)/1000);  // <<== segundos
+  lcd.print(",");
+  lcd.print((tiempoR1%1000)/10);
+  lcd.setCursor(0, 2);
+  lcd.print("Vuelta rapida 2:");
+  lcd.setCursor(10, 3);
+  lcd.print("   ");
+  lcd.setCursor(10, 3);
+  lcd.print(tiempoR2/60000);   // <<== minutos
+  lcd.print(":");
+  lcd.print((tiempoR2%60000)/1000);  // <<== segundos
+  lcd.print(",");
+  lcd.print((tiempoR2%1000)/10); 
+  delay(5000);
+  Nvueltas = 1;
+}
+
+void numeroDEvueltas() 
+{
+  lcd.clear();
+  lcd.print("Cuantas vueltas?");
+  lcd.setCursor(10, 1);
+  lcd.print(Nvueltas);
+//Definir el numero de vueltas de carrera
+  
+  while(var2 < 256) 
+  {
+    if (var1 == HIGH ) 
+    {
+        ++Nvueltas;
+        lcd.setCursor(10, 1);
+        lcd.print("   ");
+        lcd.setCursor(10, 1);
+        lcd.print(Nvueltas);
+        delay(250);
+    }
+  }
+    lcd.clear();
+    lcd.print("Preparados?");
+    lcd.setCursor(0,1);
+    lcd.print("A");
+  while(var1 == LOW) 
+  {
+  delay(5);
+  }
+  delay(5);
+}
+
+
+void loop()  
+{
+ 
+  var1 = digitalRead(boton1);
+  var2 = digitalRead(boton2);
+  while (estado == 0)
+  {
+    if ((var1 == LOW) && (var2 == LOW))
+      {
+        pasoDEvuelta();
+        pantalla();
+      }
+  }
+}
